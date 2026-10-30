@@ -1,0 +1,4 @@
+# Only used on the Windows GitHub Actions build runner; the team does NOT install Python.
+pyirsdk==1.3.6
+PyYAML>=6.0,<7
+pyinstaller==6.22.3

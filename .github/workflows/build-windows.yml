@@ -1,0 +1,52 @@
+name: Build Daze Broadcast Kit for Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  package-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-build.txt
+      - name: Install build dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-build.txt
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+      - name: Build one-file Windows executable
+        run: >-
+          python -m PyInstaller
+          --noconfirm --clean --onefile
+          --name DazeTelemetry
+          --add-data "daze_telemetry/web;daze_telemetry/web"
+          launch.py
+      - name: Create team distribution ZIP
+        run: >-
+          python scripts/package_release.py
+          --exe dist/DazeTelemetry.exe
+          --output dist/Daze_of_Thunder_Broadcast_Kit_v1.3_Windows.zip
+      - name: Upload downloadable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Daze-Broadcast-Kit-v1.3-Windows
+          path: dist/Daze_of_Thunder_Broadcast_Kit_v1.3_Windows.zip
+          if-no-files-found: error
+      - name: Publish team download on GitHub Releases for a tagged version
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: >-
+          gh release create "${{ github.ref_name }}"
+          "dist/Daze_of_Thunder_Broadcast_Kit_v1.3_Windows.zip"
+          --title "Daze Broadcast Kit ${{ github.ref_name }}"
+          --notes "OBS master + local iRacing telemetry reader. Driver POV and Broadcast Team. No manual race data entry."
